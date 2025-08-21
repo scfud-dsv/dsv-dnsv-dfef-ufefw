@@ -1,0 +1,696 @@
+<!DOCTYPE html>                                                     
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <style>
+        /* 扫码按钮弹窗样式 */
+        .custom-alert {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 2000;
+            text-align: center;
+        }
+        
+        /* 移动端弹窗样式 */
+        @media only screen and (max-width: 768px) {
+            .custom-alert {
+                width: 280px; /* 固定宽度 */
+                min-height: auto; /* 最小高度 */
+                max-width: 90%; /* 最大不超过屏幕90% */
+            }
+        }
+        
+        /* PC端弹窗样式 */
+        @media only screen and (min-width: 769px) {
+            .custom-alert {
+                width: 369.44px; /* 更宽的固定宽度 */
+                min-height: auto; /* 更高以适应多行文本 */
+                max-width: 80%; /* 最大不超过屏幕80% */
+            }
+        }
+        
+        .custom-alert button {
+            margin-top: 15px;
+            padding: 8px 16px;
+            background: #999;
+            color: white;
+            border: none;
+            border-radius: 17px;
+            cursor: pointer;
+        }
+
+        /* 下拉刷新容器 */
+        .refresh-container {
+            position: fixed;
+            top: 10px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            pointer-events: none; /* 防止干扰触摸事件 */
+            z-index: 1000;
+        }
+        
+        /* 刷新动画的旋转圆圈 */
+        .refresh-spinner {
+            width: 30px;
+            height: 30px;
+            opacity: 0; /* 初始不可见 */
+            transform: translateY(-20px); /* 初始位置 */
+            transition: opacity 0.3s, transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+        
+        /* 旋转圆圈的样式 */
+        .spinner-circle {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(
+                transparent 0deg, 
+                transparent 80deg, 
+                #ff6b6b 80deg, 
+                #ff6b6b 280deg, 
+                transparent 280deg
+            );
+            animation: spin 1.2s linear infinite; /* 无限旋转动画 */
+        }
+        
+        /* 下拉箭头鼠标手势 */
+        .mouse-arrow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 16px;
+            height: 16px;
+            border-bottom: 2px solid #ff6b6b;
+            border-right: 2px solid #ff6b6b;
+            transform: translate(-50%, -50%) rotate(45deg);
+            animation: bounce 1.2s infinite; /* 上下弹跳动画 */
+        }
+        
+        /* 旋转动画 */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* 箭头弹跳动画 */
+        @keyframes bounce {
+            0%, 100% { transform: translate(-50%, -70%) rotate(45deg); }
+            50% { transform: translate(-50%, -50%) rotate(45deg); }
+        }
+
+        /* 基础移动样式 */
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            background-color: white;
+            touch-action: pan-y;
+        }
+        
+        /* 浮动图片样式 */
+        .float-icon-container {
+            position: fixed;
+            left: 2px;
+            top: 66.8%;
+            transform: translateY(-50%);
+            z-index: 100;
+            cursor: pointer;
+        }
+        
+        .float-icon {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .float-icon img {
+            width: 50px;
+            height: 50px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        .close-btn {
+            position: absolute;
+            right: -15px;
+            bottom: -6px;
+            color: #2c2f34;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 101;
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+        
+        /* 搜索框样式 PC端上移并加高 */
+        .input-container {
+            position: sticky;
+            top: 2px; /* 调整了top位置 */
+            z-index: 100;
+            width: 90%;
+            max-width: 600px;
+            margin: 2px auto;
+        }
+        
+        input {
+            width: 100%;
+            padding: 15px 76px 15px 15px;
+            border: none;
+            outline: none;
+            background-color: rgba(243 243 243);
+            border-radius: 25px;
+            font-size: 16px;
+            box-sizing: border-box;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            height: 40px;
+            caret-color: #2376e9; /* 光标色元素 */
+            animation: blink 1s step-end infinite;
+        }
+        
+        @keyframes blink {
+            from, to { border-right: 2px solid transparent; }
+            50% { border-right: 2px solid #999; }
+        }
+        
+        input::placeholder {
+            color: #999;
+        }
+        
+        .search-btn {
+            position: absolute;
+            right: 2px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 7px 11px;
+            border-radius: 20px;
+            background-color: #e9e9e9; /* 按钮色元素 */;
+            transition: background-color 0.2s;
+            font-size: 16px;
+        }
+        
+        .search-btn:hover {
+            background-color: rgba(66, 133, 244, 0.1);
+        }
+        
+        /* 扫描按钮样式 */
+        .scan-btn {
+            position: absolute;
+            right: 50px; /* 放在搜索按钮左边 */
+            top: 47%;
+            transform: translateY(-50%);
+            font-weight: bold;
+            cursor: pointer;
+            padding: 7px 11px;
+            border-radius: 20px;
+            background-color: transparent; /* 改为透明背景 */
+            transition: color 0.2s;
+            font-size: 16px;
+        }
+        
+        .scan-btn:hover {
+            opacity: 0.8; /* 悬停时改变透明度 */
+        }
+        
+        .scan-btn img {
+            width: 20px;
+            height: 20px;
+            vertical-align: middle;
+            pointer-events: none;
+        }
+        
+        /* 内容区域 */
+        .content-area {
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .content-area p {
+            margin: 5px 0;
+        }
+        
+        /* 链接样式确保颜色恢复 */
+        .link-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 15px 0;
+            position: relative;
+        }
+        
+        .copyable-link {
+            cursor: pointer;
+            color: #2c2f34;
+            text-decoration: underline;
+        }
+        
+        .copyable-link.clicked {
+            color: #0b60ed;
+            animation: none;
+            transition: color 2s ease;
+        }
+        
+        .copyable-link:not(.clicked) {
+            color: #2c2f34;
+        }
+        
+        .copy-notification {
+            color: #2c2f34;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        /* 手形图标样式 移动端 */
+        .hand-icon-mobile {
+            width: 25px;
+            height: 25px;
+            position: absolute;
+            left: -5px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        /* 手形图标样式 PC端 */
+        .hand-icon-pc {
+            width: 30px;
+            height: 30px;
+            position: absolute;
+            left: -5px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: none;
+        }
+
+        /* GIF横幅样式 */
+        .banner-gif {
+            position: fixed;
+            bottom: -139px !important; /* 距离底部139px */
+            left: 0;
+            width: 100%; /* 改为100%宽度 */
+            height: 25%; /* 高度自动 */
+            z-index: 99;
+            display: none;
+            overflow: hidden; /* 隐藏超出部分 */
+            touch-action: pan-y; /* 允许垂直触摸操作 */
+			
+			/* 单独控制左右留白 */
+            padding-left: 2px;  /* 左边留白 */
+            padding-right: 2px; /* 右边留白 */
+            box-sizing: border-box; /* 确保padding不影响总宽度 */
+        }
+
+        .banner-gif img {
+            width: 100%; /* 图片宽度100% */
+            height: 25%; /* 高度自动保持比例 */
+            display: block; /* 防止底部间隙 */
+            pointer-events: auto; /* 确保图片可以点击 */
+        }
+
+        /* 移动端样式 */
+        @media only screen and (max-width: 768px) {
+            .hand-icon-mobile {
+                display: block;
+            }
+            .hand-icon-pc {
+                display: none;
+            }
+            .link-container {
+                padding-left: 40px;
+            }
+            .copy-notification {
+                position: absolute;
+                left: 60%;
+                margin-left: 10px;
+                top: 75%;
+                transform: translateY(-50%);
+                white-space: nowrap;
+            }
+            /* 移动端显示横幅GIF */
+            .banner-gif {
+                display: block;
+            }
+            
+            /* 移动端调整扫描按钮 */
+            .scan-btn {
+                right: 50px;
+                padding: 7px 9px;
+            }
+        }
+
+        /* PC端样式 搜索框更高更靠上 */
+        @media only screen and (min-width: 769px) {
+            .input-container {
+                position: relative;
+                top: 2px; /* 调整了top位置 */
+                margin: 2px auto;
+            }
+            
+            input {
+                height: 40px;
+                font-size: 18px;
+            }
+
+            .float-icon-container {
+                width: 80px;
+                height: 80px;
+                top: 80vh;
+                left: calc(50vw - 400px);
+            }
+            
+            .float-icon img {
+                width: 80px;
+                height: 80px;
+            }
+            
+            .hand-icon-mobile {
+                display: none;
+            }
+            
+            .hand-icon-pc {
+                display: block;
+            }
+            
+            .link-container {
+                padding-left: 45px;
+                padding-right: 100px;
+            }
+            
+            .copy-notification {
+                position: relative;
+                left: 0;
+                margin-left: 10px;
+                top: auto;
+                transform: none;
+                white-space: nowrap;
+            }
+            
+            /* PC端隐藏横幅GIF */
+            .banner-gif {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 新增自定义弹窗 -->
+    <div class="custom-alert" id="customAlert">
+        <div id="alertMessage"></div>
+        <button id="alertConfirm">取消</button>
+    </div>
+
+    <!-- 隐藏的文件选择器 -->
+    <input type="file" id="fileInput" accept="image/*" style="display:none">
+
+    <!-- 下拉刷新组件 -->
+    <div class="refresh-container">
+        <div class="refresh-spinner">
+            <div class="spinner-circle"></div>
+            <div class="mouse-arrow"></div>
+        </div>
+    </div>
+
+    <!-- 搜索框 -->
+    <div class="input-container" id="searchContainer">
+        <input type="text" id="searchInput" placeholder="输入搜索内容或网址..." autocomplete="off">
+        
+	<!-- 扫描扫码功能 -->
+		<div class="scan-btn" id="scanBtn">
+            <img src="picture/qr-750.jpg" alt="">
+        </div>
+        <div class="search-btn" id="searchBtn">搜索</div>
+    </div>
+
+    <!-- 主要内容 -->
+    <div class="content-area">
+        <p style="color: #2c2f34;">纯真快速，如若无法访问，例科学：</p>
+        
+        <!-- 复制链接 -->
+        <div class="link-container">
+            <img src="picture/357v32.jpg" class="hand-icon-mobile" alt="">
+            <img src="picture/357v32.jpg" class="hand-icon-pc" alt="">
+            <p class="copyable-link" onclick="copyToClipboard(this)" style="margin-left: -10px; margin-right: 10px;">https://cs6sf8bf4b7f.vip/register?key=1965718435</p>
+            <span class="copy-notification" id="copyNotification">复制成功</span>
+        </div>
+    </div>
+
+    <!-- 浮动图片 -->
+    <div class="float-icon-container" id="floatIconContainer">
+        <div class="float-icon">
+            <a href="picture/27.7.09.jpg"><img src="picture/2667_0.jpg" alt=""></a>
+            <div class="close-btn" onclick="closeFloatIcon()">×</div>
+        </div>
+    </div>
+    
+    <!-- 背景图 -->
+	 <div style="width: 100%; height: 80vh;">
+           <iframe src="bvbu.html" frameborder="0" style="width: 100%; height: 100%;" loading="lazy" importance="high" allow="autoplay; fullscreen"></iframe>
+     </div>
+	
+	<!-- 横幅动态GIF图片 -->
+    <div class="banner-gif" id="bannerGif">
+        <a href="zfbvx.html"><img src="picture/0.webp.jpg" alt=""></a>
+    </div>
+    
+    <script>
+        // 自定义弹窗函数
+        function showAlert(message) {
+            document.getElementById('alertMessage').textContent = message;
+            document.getElementById('customAlert').style.display = 'block';
+        }
+        
+        document.getElementById('alertConfirm').onclick = function() {
+            document.getElementById('customAlert').style.display = 'none';
+        };
+
+        // 二维码扫描功能
+        document.getElementById("scanBtn").onclick = function() {
+            document.getElementById("fileInput").click();
+        };
+
+        document.getElementById("fileInput").onchange = function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    // 创建画布分析二维码
+                    const canvas = document.createElement("canvas");
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(img, 0, 0);
+                    
+                    // 使用jsQR解码
+                    const code = jsQR(
+                        ctx.getImageData(0, 0, canvas.width, canvas.height).data,
+                        canvas.width, 
+                        canvas.height
+                    );
+                    
+                    if (code) {
+                        window.open(code.data); // 自动打开链接
+                    } else {
+                        showAlert("未识别到二维码,\n请确保图片清晰,且包含完整二维码!");
+                    }
+                };
+                img.onerror = function() {
+                    showAlert("图片加载失败\n请选择有效的图片文件");
+                };
+                img.src = event.target.result;
+            };
+            reader.onerror = function() {
+                showAlert("文件读取失败\n请重试或选择其他图片");
+            };
+            reader.readAsDataURL(file);
+        };
+
+        // 检测是否是触摸设备 手机平板
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+        if (isTouchDevice) {
+            const spinner = document.querySelector('.refresh-spinner');
+            let startY = 0; // 触摸起始位置
+            let isRefreshing = false; // 是否正在刷新
+            let pullDistance = 0; // 下拉距离
+
+            // 触摸开始事件
+            document.addEventListener('touchstart', (e) => {
+                // 如果页面在顶部且未在刷新，记录起始位置
+                if (window.scrollY <= 0 && !isRefreshing) {
+                    startY = e.touches[0].clientY;
+                }
+            });
+
+            // 触摸移动事件
+            document.addEventListener('touchmove', (e) => {
+                if (isRefreshing || startY === 0) return;
+
+                const touchY = e.touches[0].clientY;
+                pullDistance = touchY - startY; // 计算下拉距离
+
+                // 如果下拉距离为正（向下拉）且页面在顶部
+                if (pullDistance > 0 && window.scrollY <= 0) {
+                    e.preventDefault(); // 阻止默认滚动行为
+                    const maxPullDistance = 60; // 最大下拉距离
+                    const normalizedPull = Math.min(pullDistance, maxPullDistance);
+                    const pullRatio = normalizedPull / maxPullDistance;
+                    
+                    // 根据下拉距离调整动画位置和透明度
+                    spinner.style.transform = `translateY(${-20 + pullRatio * 100}px)`;
+                    spinner.style.opacity = `${pullRatio}`;
+                }
+            });
+
+            // 触摸结束事件
+            document.addEventListener('touchend', (e) => {
+                if (isRefreshing || startY === 0) return;
+
+                // 如果下拉距离足够大，触发刷新
+                if (pullDistance > 50) {
+                    isRefreshing = true;
+                    spinner.style.transform = 'translateY(30px)';
+                    
+                    // 2秒后刷新页面
+                    setTimeout(() => {
+                        location.reload();
+                    }, 2000);
+                } else {
+                    // 否则隐藏动画
+                    spinner.style.transform = 'translateY(-20px)';
+                    spinner.style.opacity = '0';
+                }
+                
+                // 重置状态
+                startY = 0;
+                pullDistance = 0;
+            });
+        }
+
+        // 页面加载时和页面显示时清空搜索框
+        function clearSearchInput() {
+            const searchInput = document.getElementById('searchInput');
+            searchInput.value = '';
+            searchInput.style.opacity = '0';
+            setTimeout(() => {
+                searchInput.style.transition = 'opacity 0.3s ease';
+                searchInput.style.opacity = '1';
+                searchInput.focus();
+            }, 50);
+        }
+        
+        window.addEventListener('load', function() {
+            clearSearchInput();
+            setTimeout(clearSearchInput, 100);
+            
+            // 初始化横幅位置
+            const bannerGif = document.getElementById('bannerGif');
+            bannerGif.style.bottom = '5px';
+        });
+        
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted || performance.navigation.type === 2) {
+                const searchInput = document.getElementById('searchInput');
+                searchInput.style.transition = 'opacity 0.3s ease';
+                searchInput.style.opacity = '0';
+                
+                setTimeout(() => {
+                    clearSearchInput();
+                }, 300);
+            }
+        });
+        
+        // 获取DOM元素
+        const searchInput = document.getElementById('searchInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const copyNotification = document.getElementById('copyNotification');
+        const floatIconContainer = document.getElementById('floatIconContainer');
+        const bannerGif = document.getElementById('bannerGif');
+        
+        // 关闭浮动图标
+        function closeFloatIcon() {
+            floatIconContainer.style.display = 'none';
+            event.stopPropagation();
+            return false;
+        }
+        
+        // URL检测
+        function isURL(input) {
+            try {
+                new URL(input);
+                return true;
+            } catch {
+                return input.includes('.') && 
+                      (input.startsWith('http://') || 
+                       input.startsWith('https://') || 
+                       input.endsWith('.com') || 
+                       input.endsWith('.net') || 
+                       input.endsWith('.org') ||
+                       input.endsWith('.cc'));
+            }
+        }
+        
+        // 搜索功能
+        function handleSearch() {
+            const input = searchInput.value.trim();
+            if (!input) return;
+            
+            if (isURL(input)) {
+                let url = input;
+                if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                    url = 'https://' + url;
+                }
+                window.location.href = url;
+            } else {
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(input)}`, '_blank');
+            }
+        }
+        
+        // 复制功能
+        function copyToClipboard(element) {
+            navigator.clipboard.writeText(element.textContent).then(() => {
+                copyNotification.style.opacity = '1';
+                setTimeout(() => copyNotification.style.opacity = '0', 2000);
+                
+                element.classList.add('clicked');
+                
+                setTimeout(() => {
+                    element.classList.remove('clicked');
+                }, 2000);
+            });
+        }
+        
+        // 事件监听
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleSearch();
+            }
+        });
+        searchBtn.addEventListener('click', handleSearch);
+    </script>
+	<script src="js/judgment.js"></script>
+</body>
+</html>

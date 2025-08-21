@@ -1,0 +1,72 @@
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- 新增预加载提示 -->
+<link rel="preconnect" href="https://picsum.photos">
+<link rel="preload" as="image" href="https://picsum.photos/680/453">
+<script src="https://cdn.jsdelivr.net/wp/plugins/wp-slimstat/tags/4.6.5/wp-slimstat.js"></script>
+
+<div class="image-container">
+    <img 
+        src="https://picsum.photos/680/453" 
+        alt="img" 
+        class="responsive-img adjustable-img"
+        onload="this.style.opacity=1"
+        style="opacity:0; transition: opacity 0.5s ease;"
+        loading="lazy"
+    >
+</div>
+
+<style>
+    /* 容器样式 */
+    .image-container {
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 453px;
+    }
+    
+    /* 基础样式 */
+    .adjustable-img {
+        max-width: 110%;
+        height: auto;
+        display: block;
+        box-sizing: content-box;
+        
+        /* 调节参数域 */
+        --left-space: -6.1px;
+        --right-space: -5.5px;
+        --width-adjust: 0px;
+        
+        /* 自动计算逻辑 */
+        margin-left: var(--left-space);
+        margin-right: var(--right-space);
+        width: calc(100% - var(--left-space) - var(--right-space) + var(--width-adjust));
+        
+        /* 其它固定样式 */
+        margin-top: -100px;
+        margin-bottom: 10px;
+        padding: 5px;
+    }
+
+    /* PC端样式 */
+    @media (min-width: 768px) {
+        .image-container {
+            position: relative;
+        }
+        
+        .adjustable-img {
+            max-width: 80%;
+            width: auto;
+            margin: 20px auto 30px auto;
+            padding: 10px 15px;
+            
+            /* 设置调节变量 */
+            --left-space: 0px;
+            --right-space: 0px;
+            --width-adjust: 0px;
+        }
+    }
+</style>
+
+<!-- 加载任何 GitHub 发布、提交或分支 -->
+<script src="https://cdn.jsdelivr.net/gh/user/repo@version/file</script>

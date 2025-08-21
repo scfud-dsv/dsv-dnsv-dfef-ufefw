@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>http://registerkey.cn</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 70vh;
+            background-color: #fff;
+            position: relative;
+        }
+        
+        /* 移动设备样式 */
+        .new-label {
+            position: absolute;
+            top: 30px;
+            left: 25px;
+            color: #333;
+            font-weight: bold;
+            font-size: 18px;
+            z-index: 1000;
+        }
+        .payment-container {
+            position: relative;
+            display: inline-block;
+            margin-top: 30px;
+        }
+        .password {
+            position: absolute;
+            left: 0;
+            top: -23px; /* 调整上下位置 */
+            font-size: 19px;
+            font-weight: bold;
+            color: #e74c3c;
+            padding: 0;
+            display: flex;
+            align-items: center;
+        }
+        .qr-code img {
+            width: 300px;
+            height: 375px;
+            display: block;
+            border: 1px solid white;
+            border-radius: 0px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        .note {
+            font-size: 16px;
+            color: #202626;
+            text-align: left;
+            margin: -1px 0; /* 调整上下间距 */
+        }
+        .password-label {
+            font-size: 16px;
+            color: #202626;
+            margin-right: 1px;
+        }
+        .note-container {
+            margin-top: 1px; /* 调整容体位置 */
+            position: relative;
+        }
+        .countdown-container {
+            display: flex;
+            align-items: center;
+            margin-top: 5px;
+        }
+        .arrow-left {
+            width: 0;
+            height: 0;
+            border-top: 8px solid transparent;
+            border-bottom: 8px solid transparent;
+            border-right: 12px solid #e74c3c;
+            margin-right: 8px;
+            animation: pulse 1s infinite alternate;
+        }
+        @keyframes pulse {
+            from { opacity: 0.0; }
+            to { opacity: 1; }
+        }
+        .countdown-text {
+            font-size: 16px;
+            color: #202626;
+        }
+        .expired {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        /* pc设备样式 */
+        @media (min-width: 768px) {
+            .new-label {
+                position: absolute;
+                left: calc(52% - 199px); /* 与支付框左对齐 */
+                top: 50px;
+                margin-bottom: 0;
+                font-size: 22px;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="new-label">；新的</div>
+    
+    <div class="background-container">
+        <div class="payment-container">
+            <div class="password">
+                <span class="password-label">微信zfb 9元¥ 备注:</span>
+                <span id="paymentPassword">----</span>
+            </div>
+            <div class="qr-code">
+                <img src="picture/mer_qr.jpg" alt="">
+            </div>
+            <div class="note-container">
+                <p class="note">支付成功 私信qq3323796524 获取安装包</p>
+                <div class="countdown-container">
+                    <div class="arrow-left"></div>
+                    <p class="note countdown-text" id="countdown">验证码有效期为1分钟 ...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 生成4位随机密码
+        function generatePassword() {
+            const password = Math.floor(1000 + Math.random() * 9000);
+            document.getElementById('paymentPassword').textContent = password;
+            
+            // 设置数值倒计时
+            setTimeout(() => {
+                document.getElementById('paymentPassword').textContent = '----';
+                const countdownElement = document.getElementById('countdown');
+                countdownElement.textContent = "验证码已失效 !";
+                countdownElement.classList.add('expired');
+            }, 60 * 1000); // 1分钟
+        }
+        
+        // 页面加载时 生成密码
+        window.onload = generatePassword;
+    </script>
+</body>
+</html>
